@@ -1,0 +1,173 @@
+serve:
+  public:
+    base_url: http://172.17.102.110/iam/external
+    cors:
+      enabled: true
+      allowed_origins:
+        - http://172.17.102.110 
+      allowed_methods:
+        - POST
+        - GET
+        - PUT
+        - PATCH
+        - DELETE
+      allowed_headers:
+        - Authorization
+        - Cookie
+        - Content-Type
+      exposed_headers:
+        - Content-Type
+        - Set-Cookie
+      allow_credentials: true
+  admin:
+    base_url: http://kratos:4434/
+
+selfservice:
+  default_browser_return_url: http://172.17.102.110 
+  allowed_return_urls:
+    - http://172.17.102.110 
+
+  methods:
+    # password:
+    #   enabled: true
+    #
+    # lookup_secret:
+    #   enabled: false
+    
+    code:
+      config:
+        lifespan: "5m" 
+        missing_credential_fallback_enabled: true
+      mfa_enabled: true    
+
+  flows:
+    settings:
+      ui_url: http://172.17.102.110/auth/users/reset
+      required_aal: aal1
+
+    verification:
+      ui_url: http://172.17.102.110/auth/users/verification
+      enabled: true
+      use: code
+
+    recovery:
+      ui_url: http://172.17.102.110/auth/users/recovery
+      enabled: true
+      use: code
+      after:
+        hooks:
+        - hook: revoke_active_sessions
+
+    logout:
+      after:
+        default_browser_return_url: http://172.17.102.110 
+
+    login:
+      ui_url: http://172.17.102.110/auth/users/login
+      after:
+        password:
+          hooks:
+            - hook: require_verified_address
+            - hook: verification
+            - hook: show_verification_ui
+            - hook: web_hook
+              config:
+                url: http://host.docker.internal:3020/api/v1/external-user-login
+                method: POST
+                body: file:///etc/config/kratos/regis_body.jsonnet
+                can_interrupt: false
+                response:
+                  parse: false
+      #   oidc:
+      #     hooks:
+      #       - hook: web_hook
+      #         config:
+      #           url: http://host.docker.internal:3020/api/v1/external-user-login
+      #           method: POST
+      #           body: file:///etc/config/kratos/login_body.jsonnet
+      #           can_interrupt: false
+      #           response:
+      #             parse: false
+
+    registration:
+      enable_legacy_one_step: true
+      ui_url: http://172.17.102.110/auth/users/signup
+      after:
+        hooks:
+          - hook: web_hook
+            config:
+              url: http://host.docker.internal:3020/api/v1/external-user
+              method: POST
+              body: file:///etc/config/kratos/regis_body.jsonnet
+              can_interrupt: false
+              response:
+                parse: false
+        # oidc:
+        #   hooks:
+        #     - hook: session        
+
+    error:
+      ui_url: http://172.17.102.110 
+
+log:
+  level: debug
+
+cookies:
+  path: /iam/external
+  same_site: Lax
+
+session:
+  cookie:
+    path: /
+    name: rumahmurah_user_session
+  whoami:
+    required_aal: aal1
+
+hashers:
+  argon2:
+    parallelism: 1
+    memory: 128KB
+    iterations: 2
+    salt_length: 16
+    key_length: 16
+
+identity:
+  default_schema_id: external
+  schemas:
+    - id: external
+      url: file:///etc/config/kratos/identity.schema.json
+
+courier:
+  # template_override_path: /etc/config/kratos/courier-templates
+  smtp:
+    from_address: no-reply@btn.co.id
+    from_name: Rumah Murah BTN
+    connection_uri: smtps://test:test@mailslurper:1025/?skip_ssl_verify=true
+
+  # templates:
+  #   login_code:
+  #     valid:
+  #       email:
+  #         body:
+  #           plaintext: file:///etc/config/kratos/courier-templates/login_code/valid/2fa-body-text.gotmpl
+  #           html: file:///etc/config/kratos/courier-templates/login_code/valid/2fa-body-html.gotmpl
+  #         subject: file:///etc/config/kratos/courier-templates/2fa-subject.gotmpl
+  #
+  #   recovery_code:
+  #     valid:
+  #       email:
+  #         body:
+  #           plaintext: file:///etc/config/kratos/courier-templates/recovery_code/valid/email.body.plaintext.gotmpl
+  #           html: file:///etc/config/kratos/courier-templates/recovery_code/valid/email.body.gotmpl
+  #         subject: file:///etc/config/kratos/courier-templates/recovery_code/valid/email.subject.gotmpl
+  #
+  #   verification_code:
+  #     valid:
+  #       email:
+  #         body:
+  #           plaintext: "base64://IkhhaSwge3sgLklkZW50aXR5LnRyYWl0cy5uYW1lIH19Ljxici8+IFRlcmltYSBrYXNpaCBzdWRhaCBtZW5kYWZ0YXIgdW50dWsgYmVyZ2FidW5nIGRlbmdhbiBSdW1haCBNdXJhaCBCVE4uIFVudHVrIG1lbmdrb25maXJtYXNpIHBlbmRhZnRhcmFuIHNpbGFrYW4gbWFzdWtrYW4ga29kZSB2ZXJpZmlrYXNpIDEyMzQ1NiBhdGF1IGtsaWsge3sgLlZlcmlmaWNhdGlvblVSTCB9fSBiZXJpa3V0Ljxici8+IEplbGFqYWhpIFJ1bWFoIE11cmFoIEJUTiBkYW4gdGVtdWthbiBhc2V0IEltcGlhbiB5YW5nIHNlc3VhaSBkZW5nYW4ga2VidXR1aGFubXUgZGkgc2luaSE8YnIvPiBBZGEgcGVydGFueWFhbj8gU2lsYWthbiBrdW5qdW5naSBsYW1hbiBodHRwczovL3J1bWFobXVyYWguYnRuLmNvLmlkL2ZhcSBSdW1haCBNdXJhaCBCVE4uPGJyLz4gQXRhdSBodWJ1bmdpIGthbWkgZGkgQlROIENhbGwgMTUwMjg2IGF0YXUgMTUwMDI4Ni48YnIvPiBTYWxhbSw8YnIvPiBCVE4iIA0K" 
+  #           html: "base64://SGFpLCB7eyAuSWRlbnRpdHkudHJhaXRzLm5hbWUgfX0uIDxici8+PGJyLz4gVGVyaW1hIGthc2loIHN1ZGFoIG1lbmRhZnRhciB1bnR1ayBiZXJnYWJ1bmcgZGVuZ2FuIFJ1bWFoIE11cmFoIEJUTi4gVW50dWsgbWVuZ2tvbmZpcm1hc2kgcGVuZGFmdGFyYW4gc2lsYWthbiBtYXN1a2thbiBrb2RlIHZlcmlmaWthc2kge3sgLlZlcmlmaWNhdGlvbkNvZGUgfX0gYXRhdSBrbGlrIDxhIGhyZWY9Int7IC5WZXJpZmljYXRpb25VUkwgfX0iPnt7IC5WZXJpZmljYXRpb25VUkwgfX08L2E+IGJlcmlrdXQuPGJyLz48YnIvPiBKZWxhamFoaSBSdW1haCBNdXJhaCBCVE4gZGFuIHRlbXVrYW4gYXNldCBJbXBpYW4geWFuZyBzZXN1YWkgZGVuZ2FuIGtlYnV0dWhhbm11IGRpIHNpbmkhPGJyLz48YnIvPiBBZGEgcGVydGFueWFhbj8gU2lsYWthbiBrdW5qdW5naSBsYW1hbiBodHRwczovL3J1bWFobXVyYWguYnRuLmNvLmlkL2ZhcSBSdW1haCBNdXJhaCBCVE4uPGJyLz48YnIvPiBBdGF1IGh1YnVuZ2kga2FtaSBkaSBCVE4gQ2FsbCAxNTAyODYgYXRhdSAxNTAwMjg2Ljxici8+PGJyLz4gU2FsYW0sPGJyLz48YnIvPiBCVE4="
+  #         subject: file:///etc/config/kratos/courier-templates/verification-subject.gotmpl 
+
+oauth2_provider:
+  url: http://hydra:4445

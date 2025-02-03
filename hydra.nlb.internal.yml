@@ -1,0 +1,65 @@
+serve:
+  cookies:
+    # domain: rumahmurah.dev.btn.co.id
+    names:
+      login_csrf: login_internal_users
+      consent_csrf: consent_internal_users
+      session: session_internal_users
+
+  admin:
+    port: 4447
+    cors:
+      enabled: true
+      allowed_origins:
+        - http://127.0.0.1:9999/
+      allowed_methods:
+        - POST
+        - GET
+        - PUT
+        - PATCH
+        - DELETE
+      allowed_headers:
+        - Authorization
+      exposed_headers:
+        - Content-Type
+  public:
+    port: 4446
+    cors:
+      enabled: true
+#     cors:
+#       enabled: false
+#       allowed_origins:
+#         - http://localhost:3123/
+#       allowed_methods:
+#         - POST
+#         - GET
+#         - PUT
+#         - PATCH
+#         - DELETE
+#       allowed_headers:
+#         - Authorization
+#       exposed_headers:
+#         - Content-Type
+
+
+urls:
+  self:
+    issuer: http://172.17.102.110/sso/internal
+    public: http://172.17.102.110/sso/internal
+  consent: http://172.17.102.110/auth/internal/consent
+  login: http://172.17.102.110/auth/internal/login
+  logout: http://172.17.102.110/auth/internal/logout
+  post_logout_redirect: http://172.17.102.110:5173/internal
+
+
+secrets:
+  system:
+    - youReallyNeedToChangeThis
+
+oidc:
+  subject_identifiers:
+    supported_types:
+      - pairwise
+      - public
+    pairwise:
+      salt: youReallyNeedToChangeThis

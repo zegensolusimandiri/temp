@@ -1,0 +1,120 @@
+serve:
+  public:
+    base_url: http://172.17.102.110/iam/internal
+    cors:
+      enabled: true
+      allowed_origins:
+        - http://172.17.102.110 
+      allowed_methods:
+        - POST
+        - GET
+        - PUT
+        - PATCH
+        - DELETE
+      allowed_headers:
+        - Authorization
+        - Cookie
+        - Content-Type
+      exposed_headers:
+        - Content-Type
+        - Set-Cookie
+      allow_credentials: true
+
+  admin:
+    base_url: http://kratos-internal:4434/
+
+selfservice:
+  default_browser_return_url: http://172.17.102.110:5173/internal
+  allowed_return_urls:
+    - http://172.17.102.110:5173/internal
+
+  methods:
+    password:
+      enabled: true
+    
+    code:
+      config:
+        lifespan: "30m" 
+        missing_credential_fallback_enabled: true
+      mfa_enabled: true
+
+  flows:
+    settings:
+      ui_url: http://172.17.102.110/auth/internal/reset
+      required_aal: aal1
+      after:
+        password:
+          hooks:
+            - hook: web_hook
+              config:
+                url: http://host.docker.internal:3020/api/v1/add-recovery
+                method: POST
+                body: file:///etc/config/kratos/regis_body.jsonnet
+                can_interrupt: false
+                response:
+                  parse: false
+
+    verification:
+      ui_url: http://172.17.102.110/auth/internal/verification
+      enabled: false
+      use: code
+
+    recovery:
+      ui_url: http://172.17.102.110/auth/internal/recovery
+      enabled: true
+      use: code
+      notify_unknown_recipients: true
+      after:
+        hooks:
+        - hook: revoke_active_sessions
+
+    logout:
+      after:
+        default_browser_return_url: http://172.17.102.110/auth/internal/login
+
+    login:
+      ui_url: http://172.17.102.110/auth/internal/login
+      after:
+        default_browser_return_url: http://rumahmurah.dev.btn.co.id/internal
+
+    error:
+      ui_url: http://172.17.102.110/auth/error
+
+log:
+  level: debug
+
+cookies:
+  path: /iam/internal
+  same_site: Lax
+
+session:
+  cookie:
+    path: /
+    name: krt_int_session
+  whoami:
+    required_aal: aal1
+
+hashers:
+  argon2:
+    parallelism: 1
+    memory: 128KB
+    iterations: 2
+    salt_length: 16
+    key_length: 16
+
+identity:
+  default_schema_id: internal
+  schemas:
+    - id: internal
+      url: file:///etc/config/kratos/internal.schema.json
+    - id: external 
+      url: file:///etc/config/kratos/identity.schema.json
+
+courier:
+  smtp:
+    from_address: no-reply@btn.co.id
+    from_name: Rumah Murah BTN
+    connection_uri: smtps://test:test@mailslurper:1025/?skip_ssl_verify=true
+
+oauth2_provider:
+  url: http://hydra-internal:4447

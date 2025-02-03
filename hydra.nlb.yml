@@ -1,0 +1,60 @@
+serve:
+
+  cookies:
+    # domain: rumahmurah.dev.btn.co.id
+    names:
+      login_csrf: login_users
+      consent_csrf: consent_users
+      session: session_users
+  
+  admin:
+    cors:
+      enabled: true
+      allowed_origins:
+        - http://127.0.0.1:5173/
+      allowed_methods:
+        - POST
+        - GET
+        - PUT
+        - PATCH
+        - DELETE
+      allowed_headers:
+        - Authorization
+      exposed_headers:
+        - Content-Type
+  public:
+    cors:
+      enabled: true
+      # allowed_origins:
+      #   - http://rumahmurah.dev.btn.co.id
+      # allowed_methods:
+      #   - POST
+      #   - GET
+      #   - PUT
+      #   - PATCH
+      #   - DELETE
+      # allowed_headers:
+      #   - Authorization
+      # exposed_headers:
+      #   - Content-Type
+
+urls:
+  self:
+    issuer: http://172.17.102.110/sso/external
+    public: http://172.17.102.110/sso/external
+  consent: http://172.17.102.110/auth/users/consent
+  login: http://172.17.102.110/auth/users/login
+  logout: http://172.17.102.110/auth/users/logout
+  post_logout_redirect: http://172.17.102.110 
+
+secrets:
+  system:
+    - youReallyNeedToChangeThis
+
+oidc:
+  subject_identifiers:
+    supported_types:
+      - pairwise
+      - public
+    pairwise:
+      salt: youReallyNeedToChangeThis
